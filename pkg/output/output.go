@@ -117,12 +117,14 @@ func New(options Options) (Writer, error) {
 		if options.StoreResponseDir != DefaultResponseDir && options.StoreResponseDir != "" {
 			writer.storeResponseDir = options.StoreResponseDir
 		}
-		_ = os.RemoveAll(writer.storeResponseDir)
-		_ = os.MkdirAll(writer.storeResponseDir, os.ModePerm)
-		// todo: the index file seems never used?
-		_, err := newFileOutputWriter(filepath.Join(writer.storeResponseDir, indexFile))
-		if err != nil {
-			return nil, errorutil.NewWithTag("output", "could not create index file").Wrap(err)
+		if !options.IncrementalCrawling {
+			_ = os.RemoveAll(writer.storeResponseDir)
+			_ = os.MkdirAll(writer.storeResponseDir, os.ModePerm)
+			// todo: the index file seems never used?
+			_, err := newFileOutputWriter(filepath.Join(writer.storeResponseDir, indexFile))
+			if err != nil {
+				return nil, errorutil.NewWithTag("output", "could not create index file").Wrap(err)
+			}
 		}
 	}
 	if options.ErrorLogFile != "" {

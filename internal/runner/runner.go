@@ -3,6 +3,7 @@ package runner
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/projectdiscovery/gologger"
@@ -36,10 +37,15 @@ type Runner struct {
 
 type RunnerState struct {
 	InFlightUrls *mapsutil.SyncLockMap[string, struct{}]
+	CrawledURLs  *mapsutil.SyncLockMap[string, struct{}]
 }
 
 // New returns a new crawl runner structure
 func New(options *types.Options) (*Runner, error) {
+	runnerState := &RunnerState{
+		InFlightUrls: mapsutil.NewSyncLockMap[string, struct{}](),
+		CrawledURLs:  mapsutil.NewSyncLockMap[string, struct{}](),
+	}
 	// create the resume configuration structure
 	if options.ShouldResume() {
 		gologger.Info().Msg("Resuming from save checkpoint")
@@ -48,13 +54,27 @@ func New(options *types.Options) (*Runner, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		runnerState := &RunnerState{}
 		err = json.Unmarshal(file, runnerState)
 		if err != nil {
 			return nil, err
 		}
 		options.URLs = mapsutil.GetKeys(runnerState.InFlightUrls.GetAll())
+	}
+
+	if options.IncrementalCrawling && fileutil.FileExists(IncrementalCrawlingStateFilename()) {
+		gologger.Info().Msg("Resuming incremental crawling from save checkpoint")
+		file, err := os.ReadFile(IncrementalCrawlingStateFilename())
+		if err != nil {
+			return nil, err
+		}
+		err = json.Unmarshal(file, runnerState)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Delete the existing incremental crawling state file. This ensures that any residual state from a previous crawl
+		// is not inadvertently carried over when incremental crawling is not enabled for the current run.
+		_ = os.Remove(IncrementalCrawlingStateFilename())
 	}
 
 	showBanner()
@@ -139,7 +159,7 @@ func New(options *types.Options) (*Runner, error) {
 		stdin:          fileutil.HasStdin(),
 		crawlerOptions: crawlerOptions,
 		crawler:        crawler,
-		state:          &RunnerState{InFlightUrls: mapsutil.NewSyncLockMap[string, struct{}]()},
+		state:          runnerState,
 		networkpolicy:  np,
 	}
 
@@ -156,8 +176,19 @@ func (r *Runner) Close() error {
 
 func (r *Runner) SaveState(resumeFilename string) error {
 	runnerState := r.state
+	if r.options.IncrementalCrawling {
+		runnerState.InFlightUrls = mapsutil.NewSyncLockMap[string, struct{}]()
+	}
 	data, _ := json.Marshal(runnerState)
 	return os.WriteFile(resumeFilename, data, os.ModePerm)
+}
+
+func IncrementalCrawlingStateFilename() string {
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		gologger.Fatal().Msgf("could not get home directory: %s", err)
+	}
+	return filepath.Join(homedir, ".config", "katana", "incremental_crawling_state")
 }
 
 func expandCIDRInputValue(value string) []string {

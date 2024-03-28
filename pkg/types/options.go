@@ -152,6 +152,8 @@ type Options struct {
 	TlsImpersonate bool
 	//DisableRedirects disables the following of redirects
 	DisableRedirects bool
+	// IncrementalCrawling enables incremental crawling
+	IncrementalCrawling bool
 }
 
 func (options *Options) ParseCustomHeaders() map[string]string {

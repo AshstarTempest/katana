@@ -25,4 +25,5 @@ type Options struct {
 	ExtensionValidator    *extensions.Validator
 	OutputMatchCondition  string
 	OutputFilterCondition string
+	IncrementalCrawling   bool
 }

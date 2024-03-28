@@ -90,3 +90,21 @@ func ReplaceAllQueryParam(reqUrl, val string) string {
 	u.RawQuery = params.Encode()
 	return u.String()
 }
+
+// scheme less urls are skipped and are required for headless mode and other purposes
+// this method adds scheme if given input does not have any
+func AddSchemeIfNotExists(inputURL string) string {
+	if strings.HasPrefix(inputURL, urlutil.HTTP) || strings.HasPrefix(inputURL, urlutil.HTTPS) {
+		return inputURL
+	}
+	parsed, err := urlutil.Parse(inputURL)
+	if err != nil {
+		gologger.Warning().Msgf("input %v is not a valid url got %v", inputURL, err)
+		return inputURL
+	}
+	if parsed.Port() != "" && (parsed.Port() == "80" || parsed.Port() == "8080") {
+		return urlutil.HTTP + urlutil.SchemeSeparator + inputURL
+	} else {
+		return urlutil.HTTPS + urlutil.SchemeSeparator + inputURL
+	}
+}

@@ -25,6 +25,10 @@ func validateOptions(options *types.Options) error {
 		return errorutil.New("no inputs specified for crawler")
 	}
 
+	if options.IncrementalCrawling && options.Resume != "" {
+		return errorutil.New("incremental crawling and resume cannot be used together")
+	}
+
 	if options.Headless && options.Passive {
 		return errorutil.New("headless mode (-headless) and passive mode (-passive) cannot be used together")
 	}
@@ -99,6 +103,10 @@ func (r *Runner) parseInputs() []string {
 	}
 	final := make([]string, 0, len(values))
 	for k := range values {
+		if r.state.CrawledURLs.Has(utils.AddSchemeIfNotExists(k)) {
+			gologger.Debug().Msgf("Skipping already crawled URL %s", k)
+			continue
+		}
 		final = append(final, k)
 	}
 	return final

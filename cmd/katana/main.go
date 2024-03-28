@@ -54,10 +54,18 @@ func main() {
 			gologger.DefaultLogger.Info().Msg("- Ctrl+C pressed in Terminal")
 			katanaRunner.Close()
 
-			gologger.Info().Msgf("Creating resume file: %s\n", resumeFilename)
-			err := katanaRunner.SaveState(resumeFilename)
-			if err != nil {
-				gologger.Error().Msgf("Couldn't create resume file: %s\n", err)
+			if options.IncrementalCrawling {
+				gologger.Info().Msgf("Creating incremental crawling state file: %s\n", runner.IncrementalCrawlingStateFilename())
+				err := katanaRunner.SaveState(runner.IncrementalCrawlingStateFilename())
+				if err != nil {
+					gologger.Error().Msgf("Couldn't create incremental crawling state file: %s\n", err)
+				}
+			} else {
+				gologger.Info().Msgf("Creating resume file: %s\n", resumeFilename)
+				err := katanaRunner.SaveState(resumeFilename)
+				if err != nil {
+					gologger.Error().Msgf("Couldn't create resume file: %s\n", err)
+				}
 			}
 
 			os.Exit(0)
@@ -107,6 +115,7 @@ pipelines offering both headless and non-headless crawling.`)
 		flagSet.BoolVarP(&options.IgnoreQueryParams, "ignore-query-params", "iqp", false, "Ignore crawling same path with different query-param values"),
 		flagSet.BoolVarP(&options.TlsImpersonate, "tls-impersonate", "tlsi", false, "enable experimental client hello (ja3) tls randomization"),
 		flagSet.BoolVarP(&options.DisableRedirects, "disable-redirects", "dr", false, "disable following redirects (default false)"),
+		flagSet.BoolVarP(&options.IncrementalCrawling, "incremental crawling", "ic", false, "enable incremental crawling (default false)"),
 	)
 
 	flagSet.CreateGroup("debug", "Debug",
