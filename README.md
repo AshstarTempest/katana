@@ -139,6 +139,7 @@ CONFIGURATION:
    -iqp, -ignore-query-params    Ignore crawling same path with different query-param values
    -tlsi, -tls-impersonate       enable experimental client hello (ja3) tls randomization
    -dr, -disable-redirects       disable following redirects (default false)
+   -ic, -incremental crawling    enable incremental crawling (default false)
 
 DEBUG:
    -health-check, -hc        run diagnostic check up
